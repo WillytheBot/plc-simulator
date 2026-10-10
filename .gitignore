@@ -1,0 +1,18 @@
+# CMake e file di build C++ (Windows/Visual Studio)
+build/
+out/
+.vs/
+*.exe
+*.obj
+*.lib
+*.pdb
+
+# Maven e file compilati Java
+target/
+*.class
+
+# File di sistema e IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
