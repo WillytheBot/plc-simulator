@@ -87,16 +87,27 @@ class TcpServer {
                     std::cout << "\n[RETE] Comando ricevuto: " << comando;
 
                     // Il nostro protocollo di comunicazione
+                    // Il nostro protocollo di comunicazione
                     if (comando.find("GET_TEMP") != std::string::npos) {
-                        // Leggiamo dal PLC, assembliamo la risposta e la inviamo al client con send()
                         std::string risposta = "Valore Temperatura: " + std::to_string(plc.getTemperature()) + "\n";
                         send(client_socket, risposta.c_str(), risposta.length(), 0);
                     } 
                     else if (comando.find("ALARM_ON") != std::string::npos) {
-                        plc.allarmOn(); // Modifichiamo lo stato del PLC!
+                        plc.allarmOn();
                         std::string risposta = "OK: Allarme PLC Attivato!\n";
                         send(client_socket, risposta.c_str(), risposta.length(), 0);
                     }
+                    // --- I NUOVI COMANDI ---
+                    else if (comando.find("ALARM_OFF") != std::string::npos) {
+                        plc.allarmOff();
+                        std::string risposta = "OK: Allarme PLC Disattivato!\n";
+                        send(client_socket, risposta.c_str(), risposta.length(), 0);
+                    }
+                    else if (comando.find("GET_AXIS") != std::string::npos) {
+                        std::string risposta = "Posizione Asse: " + std::to_string(plc.getAxisPosition()) + "\n";
+                        send(client_socket, risposta.c_str(), risposta.length(), 0);
+                    }
+                    // -----------------------
                     else {
                         std::string risposta = "ERR: Comando Sconosciuto\n";
                         send(client_socket, risposta.c_str(), risposta.length(), 0);
