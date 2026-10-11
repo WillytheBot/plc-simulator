@@ -26,7 +26,7 @@ Il progetto è diviso in due macro-componenti indipendenti:
 * Java JDK 17+ e `maven`
 
 ### 1. Compilazione e Avvio del Server C++
-
+```bash
 git clone [https://github.com/WillytheBot/plc-simulator.git](https://github.com/WillytheBot/plc-simulator.git)
 cd plc-simulator/server-cpp
 mkdir build && cd build
