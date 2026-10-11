@@ -1,30 +1,35 @@
-# PLC Simulator & HMI Monitor
+# PLC Simulator & Java HMI Monitor 🏭☕
 
-Un progetto industriale client-server che simula un PLC (Programmable Logic Controller) e un'interfaccia HMI di monitoraggio.
+Un'architettura client-server industriale costruita da zero per simulare la comunicazione tra un PLC (Programmable Logic Controller) e un'interfaccia HMI (Human-Machine Interface).
 
-## Architettura
-Il progetto è strutturato su due moduli separati:
-1. **Server (C++)**: Il "cervello" della macchina (PLC Simulator), sviluppato per ambiente Linux.
-2. **Client HMI (Java)**: *(In sviluppo)* L'interfaccia grafica per il monitoraggio e il controllo da parte dell'operatore.
+Questo progetto è un "Proof of Concept" che dimostra l'integrazione tra logiche hardware a basso livello e interfacce grafiche ad alto livello, utilizzando socket TCP nativi.
 
-## Il Server C++ (Simulatore PLC)
-Il backend è scritto in C++ moderno e implementa logiche industriali reali:
-- **Multithreading**: Il ciclo macchina (aggiornamento continuo dei sensori) e il centralino di rete TCP girano su due thread paralleli e indipendenti. Questo garantisce che la macchina non si blocchi mai in attesa di una connessione di rete.
-- **Socket POSIX**: Utilizza le API di rete native del kernel Linux per la comunicazione TCP affidabile (Socket, Bind, Listen, Accept continua in loop).
-- **Sincronizzazione Memoria**: Il server TCP agisce direttamente sulla memoria della simulazione fisica passando l'indirizzo (Referenza `&`) dell'oggetto PLC, facendo da ponte tra la rete e l'hardware simulato.
+## 🏗️ Architettura del Sistema
 
-### Protocollo di Comunicazione (Porta 5020)
-Il server rimane costantemente in ascolto sulla porta 5020 e risponde istantaneamente ai seguenti comandi testuali:
-- `GET_TEMP`: Legge dal sensore e restituisce la temperatura attuale.
-- `ALARM_ON`: Attiva l'allarme generale del PLC.
-- `ALARM_OFF`: Disattiva l'allarme generale del PLC.
-- `GET_AXIS`: Legge e restituisce la quota attuale dell'asse motore.
+Il progetto è diviso in due macro-componenti indipendenti:
 
-### Come compilare ed eseguire il Server (Linux / WSL)
-Dalla cartella `server-cpp` contenente i sorgenti C++:
-```bash
-mkdir build
-cd build
+1. **Server C++ (Il PLC):**
+   * Backend multithread scritto in C++ moderno.
+   * Gestisce il ciclo macchina fisico in background (simulazione di temperature, allarmi e posizionamento assi).
+   * Espone un server TCP/IP su porta 5020 per ricevere comandi in tempo reale usando socket POSIX.
+
+2. **Client Java (L'HMI):**
+   * Interfaccia grafica sviluppata in Java Swing.
+   * Implementa un Thread di Polling automatico (1Hz) per monitorare lo stato della macchina in background.
+   * Permette l'invio di comandi manuali e parametrici (es. `SET_AXIS <quota>`) parsati direttamente dal server C++.
+
+## 🚀 Come avviare il progetto
+
+### Prerequisiti
+* Sistema Linux (o WSL)
+* Compilatore `g++` e `cmake`
+* Java JDK 17+ e `maven`
+
+### 1. Compilazione e Avvio del Server C++
+
+git clone [https://github.com/WillytheBot/plc-simulator.git](https://github.com/WillytheBot/plc-simulator.git)
+cd plc-simulator/server-cpp
+mkdir build && cd build
 cmake ..
 make
 ./plc-simulator
