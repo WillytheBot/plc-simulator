@@ -11,31 +11,32 @@ public class App extends JFrame {
 
     // Componenti grafici
     private JTextArea logArea;
+    private JLabel lblTemp;
+    private JLabel lblAxis;
 
     public App() {
-        // 1. Configurazione della finestra principale
         setTitle("PLC HMI Monitor");
-        setSize(500, 400);
+        setSize(600, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // 2. Creiamo il pannello superiore con i 4 bottoni
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(2, 2, 10, 10)); // Griglia 2x2 con spazio
+        // --- PANNELLO SUPERIORE (Monitoraggio Live) ---
+        JPanel statusPanel = new JPanel(new GridLayout(1, 2));
+        statusPanel.setBackground(Color.DARK_GRAY);
+        
+        lblTemp = new JLabel(" Temperatura: In attesa...", SwingConstants.CENTER);
+        lblTemp.setForeground(Color.CYAN);
+        lblTemp.setFont(new Font("Arial", Font.BOLD, 18));
+        
+        lblAxis = new JLabel(" Asse: In attesa...", SwingConstants.CENTER);
+        lblAxis.setForeground(Color.ORANGE);
+        lblAxis.setFont(new Font("Arial", Font.BOLD, 18));
+        
+        statusPanel.add(lblTemp);
+        statusPanel.add(lblAxis);
+        add(statusPanel, BorderLayout.NORTH);
 
-        JButton btnTemp = new JButton("GET_TEMP");
-        JButton btnAxis = new JButton("GET_AXIS");
-        JButton btnAlarmOn = new JButton("ALARM_ON");
-        JButton btnAlarmOff = new JButton("ALARM_OFF");
-
-        buttonPanel.add(btnTemp);
-        buttonPanel.add(btnAxis);
-        buttonPanel.add(btnAlarmOn);
-        buttonPanel.add(btnAlarmOff);
-
-        add(buttonPanel, BorderLayout.NORTH);
-
-        // 3. Creiamo l'area di testo centrale (lo "schermo" dell'HMI)
+        // --- PANNELLO CENTRALE (Log) ---
         logArea = new JTextArea();
         logArea.setEditable(false);
         logArea.setFont(new Font("Monospaced", Font.BOLD, 14));
@@ -43,41 +44,64 @@ public class App extends JFrame {
         logArea.setForeground(Color.GREEN);
         add(new JScrollPane(logArea), BorderLayout.CENTER);
 
-        // 4. Colleghiamo i bottoni alle azioni di rete
-        // Quando clicchi, chiama la funzione sendCommand() passando il testo corretto
-        btnTemp.addActionListener(e -> sendCommand("GET_TEMP"));
-        btnAxis.addActionListener(e -> sendCommand("GET_AXIS"));
-        btnAlarmOn.addActionListener(e -> sendCommand("ALARM_ON"));
-        btnAlarmOff.addActionListener(e -> sendCommand("ALARM_OFF"));
+        // --- PANNELLO INFERIORE (Bottoni Manuali) ---
+        JPanel buttonPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+        
+        JButton btnTemp = new JButton("GET_TEMP (Manuale)");
+        JButton btnAxis = new JButton("GET_AXIS (Manuale)");
+        JButton btnAlarmOn = new JButton("ALARM_ON");
+        JButton btnAlarmOff = new JButton("ALARM_OFF");
+
+        buttonPanel.add(btnTemp);
+        buttonPanel.add(btnAxis);
+        buttonPanel.add(btnAlarmOn);
+        buttonPanel.add(btnAlarmOff);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        // --- EVENTI DEI BOTTONI ---
+        btnTemp.addActionListener(e -> sendManualCommand("GET_TEMP"));
+        btnAxis.addActionListener(e -> sendManualCommand("GET_AXIS"));
+        btnAlarmOn.addActionListener(e -> sendManualCommand("ALARM_ON"));
+        btnAlarmOff.addActionListener(e -> sendManualCommand("ALARM_OFF"));
+
+        // --- IL POLLING AUTOMATICO (Ogni 1000 millisecondi) ---
+        Timer pollTimer = new Timer(1000, e -> {
+            // Chiede i dati in background e aggiorna le etichette in alto
+            String tempResp = sendSilentCommand("GET_TEMP");
+            String axisResp = sendSilentCommand("GET_AXIS");
+            
+            // Pulisce la risposta per mostrare solo i valori
+            if(tempResp != null) lblTemp.setText(" " + tempResp.replace("\n", ""));
+            if(axisResp != null) lblAxis.setText(" " + axisResp.replace("\n", ""));
+        });
+        pollTimer.start();
     }
 
-    // Questa funzione è l'equivalente del nostro "Netcat"
-    private void sendCommand(String command) {
-        try {
-            // A. Creiamo il socket Client verso il server C++
-            Socket socket = new Socket("localhost", 5020);
+    // Funzione per i comandi manuali (scrive nel log nero)
+    private void sendManualCommand(String command) {
+        String response = sendSilentCommand(command);
+        if (response != null) {
+            logArea.append("> " + command + " | " + response + "\n");
+        } else {
+            logArea.append(">> ERRORE CONNESSIONE\n");
+        }
+    }
+
+    // Funzione di base che apre e chiude il socket, restituendo la stringa letta
+    private String sendSilentCommand(String command) {
+        try (Socket socket = new Socket("localhost", 5020);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
             
-            // B. Prepariamo gli strumenti per SCRIVERE e LEGGERE
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-            // C. Inviamo il comando sulla rete
             out.println(command);
-
-            // D. Leggiamo la risposta e la scriviamo a schermo
-            String response = in.readLine();
-            logArea.append("> Comando: " + command + " | Risposta: " + response + "\n");
-
-            // E. Chiudiamo la comunicazione
-            socket.close();
-
+            return in.readLine();
+            
         } catch (Exception ex) {
-            logArea.append(">> ERRORE DI CONNESSIONE: Il PLC Simulator è acceso?\n");
+            return null; // Ritorna null se il server C++ è spento
         }
     }
 
     public static void main(String[] args) {
-        // Avviamo l'interfaccia grafica in modo sicuro
         SwingUtilities.invokeLater(() -> {
             App hmi = new App();
             hmi.setVisible(true);
